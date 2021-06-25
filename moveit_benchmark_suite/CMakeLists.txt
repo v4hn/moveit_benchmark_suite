@@ -36,3 +36,8 @@ set(CMAKE_CXX_STANDARD 14)
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 
+add_library(${PROJECT_NAME}
+  src/benchmark_parameters.cpp)
+
+add_executable(${PROJECT_NAME}_load_benchmark src/load_benchmark.cpp)
+target_link_libraries(${PROJECT_NAME}_load_benchmark ${PROJECT_NAME} ${catkin_LIBRARIES})

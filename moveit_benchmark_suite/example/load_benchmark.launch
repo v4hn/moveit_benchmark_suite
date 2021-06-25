@@ -1,0 +1,15 @@
+<launch>
+
+  <!-- Robot start state -->
+  <arg name="rss" default="$(find moveit_benchmark_suite)/example/panda_arm_start_state.yaml"/>
+
+  <!-- Goal constraints -->
+  <arg name="gc" default="$(find moveit_benchmark_suite)/example/goal_constraints.yaml"/>
+
+  <!-- Launch node -->
+  <node name="moveit_benchmark_suite_load_benchmark" pkg="moveit_benchmark_suite" type="moveit_benchmark_suite_load_benchmark" output="screen" required="true" launch-prefix="gdb --args">
+    <rosparam command="load" file="$(arg rss)"/>
+    <rosparam command="load" file="$(arg gc)"/>
+  </node>
+
+</launch>

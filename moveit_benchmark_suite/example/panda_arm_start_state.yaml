@@ -1,0 +1,63 @@
+# Config for multiple robot start states
+start_states:
+  - joint_state:
+      name: 
+        - panda_joint1
+        - panda_joint2
+        - panda_joint3
+        - panda_joint4
+        - panda_joint5
+        - panda_joint6
+        - panda_joint7
+        - panda_fingerjoint1
+        - panda_fingerjoint2
+      position:
+        - -0.357411
+        - 0.42179
+        - -0.0942837
+        - -2.36042
+        - 0.108761
+        - 2.77859
+        - -1.33099
+        - 0.015
+        - 0.015
+      
+
+
+# Variant 1
+#start_states:
+#  - name: pre-grasp-block1
+#    joints:
+#      - panda_joint1: -0.357411
+#      - panda_joint2: 0.42179
+#      - panda_joint3: -0.0942837
+#      - panda_joint4: -2.36042
+#      - panda_joint5: 0.108761
+#      - panda_joint6: 2.77859
+#      - panda_joint7: -1.33099
+#      - panda_fingerjoint1: 0.015
+#      - panda_fingerjoint2: 0.015
+
+# Variant 2 
+#robot_start_states:
+#  - name: pre-grasp-block1
+#    joint_names:
+#      - panda_joint1
+#      - panda_joint2
+#      - panda_joint3
+#      - panda_joint4
+#      - panda_joint5
+#      - panda_joint6
+#      - panda_joint7
+#      - panda_fingerjoint1
+#      - panda_fingerjoint2
+#    joint_values:
+#      - -0.357411
+#      - 0.42179
+#      - -0.0942837
+#      - -2.36042
+#      - 0.108761
+#      - 2.77859
+#      - -1.33099
+#      - 0.015
+#      - 0.015
