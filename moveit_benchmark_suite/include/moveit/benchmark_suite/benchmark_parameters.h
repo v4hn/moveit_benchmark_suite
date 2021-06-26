@@ -60,14 +60,23 @@ public:
 	void readPathConstraints(ros::NodeHandle& nh);
 	void readTrajConstraints(ros::NodeHandle& nh);
 
-	const std::vector<moveit_msgs::RobotState>& getRobotStateMsgs() const { return robot_states_; }
-	const moveit_msgs::Constraints& getGoalConstraintsMsgs() const { return goal_constraints_; }
+	const std::vector<moveit_msgs::RobotState>& getRobotStates() const { return robot_states_; }
+	const moveit_msgs::Constraints& getGoalConstraints() const { return goal_constraints_; }
+	const std::vector<moveit_msgs::CollisionObject>& getCollisionObjects() const { return collision_objects_; }
 
 	bool constructRobotStates(XmlRpc::XmlRpcValue& params, std::vector<moveit_msgs::RobotState>& robot_states);
+	bool collectCollisionObjects(XmlRpc::XmlRpcValue& params,
+	                             std::vector<moveit_msgs::CollisionObject>& collision_objects);
+	bool constructMesh(XmlRpc::XmlRpcValue& params, shape_msgs::Mesh& mesh);
+	bool constructBoxPrimitive(XmlRpc::XmlRpcValue& params, shape_msgs::SolidPrimitive& primitive);
+	bool constructSpherePrimitive(XmlRpc::XmlRpcValue& params, shape_msgs::SolidPrimitive& primitive);
+	bool constructCylinderPrimitive(XmlRpc::XmlRpcValue& params, shape_msgs::SolidPrimitive& primitive);
+	bool constructConePrimitive(XmlRpc::XmlRpcValue& params, shape_msgs::SolidPrimitive& primitive);
+	bool constructPose(XmlRpc::XmlRpcValue& params, geometry_msgs::Pose& pose);
 
 protected:
 	std::vector<moveit_msgs::RobotState> robot_states_;
-
+	std::vector<moveit_msgs::CollisionObject> collision_objects_;
 	moveit_msgs::Constraints goal_constraints_;
 	moveit_msgs::Constraints path_constraints_;
 };

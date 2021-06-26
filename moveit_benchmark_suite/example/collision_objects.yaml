@@ -1,0 +1,28 @@
+collision_objects:
+  - id: 'box_lid'
+    type: mesh
+    frame_id: world
+    position: [0.5, 0.5, 0.5]
+    orientation: [0, 0, 0] #RPY
+    path: 'package://moveit_benchmark_suite_model_set/yale_cmu_berkeley/999_box_lid/collision.stl'
+    scaling: [0.001, 0.001, 0.001]
+
+  - id: 'wood_block'
+    type: mesh
+    frame_id: world
+    position: [0.5, 0.5, 0.5]
+    orientation: [0, 0, 0] #RPY
+    path: 'package://moveit_benchmark_suite_model_set/yale_cmu_berkeley/070-b_colored_wood_blocks/google_16k/collision.stl'
+    scaling: [1, 1, 1]
+
+  - id: 'box'
+    type: box_primitive
+    frame_id: world
+    position: [0.5, 0.5, 0.0]
+    orientation: [0, 0, 0] #RPY
+    dimensions: [0.1, 0.1, 0.1]
+
+  - id: 'cylinder'
+    type: cylinder_primitive
+    frame_id: box
+    dimensions: [0.1, 0.1]

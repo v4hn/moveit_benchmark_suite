@@ -41,6 +41,13 @@
 #include <moveit/kinematic_constraints/utils.h>
 #include <moveit/utils/xmlrpc_casts.h>
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <geometric_shapes/mesh_operations.h>
+#include <geometric_shapes/shape_operations.h>
+#include <geometric_shapes/shape_extents.h>
+#include <geometric_shapes/solid_primitive_dims.h>
+using namespace moveit::core;
+
 namespace moveit {
 namespace benchmark_suite {
 
@@ -57,8 +64,12 @@ void BenchmarkParameters::readStartStates(ros::NodeHandle& nh) {
 	}
 };
 
-void BenchmarkParameters::readCollisionObjects(ros::NodeHandle& nh){
-
+void BenchmarkParameters::readCollisionObjects(ros::NodeHandle& nh) {
+	XmlRpc::XmlRpcValue collision_objects_description;
+	if (!nh.getParam("collision_objects", collision_objects_description) ||
+	    !collectCollisionObjects(collision_objects_description, collision_objects_)) {
+		ROS_WARN("Collision objects not found");
+	}
 };
 
 void BenchmarkParameters::readGoalConstraints(ros::NodeHandle& nh) {
@@ -81,7 +92,7 @@ void BenchmarkParameters::readTrajConstraints(ros::NodeHandle& nh){};
 
 bool BenchmarkParameters::constructRobotStates(XmlRpc::XmlRpcValue& params,
                                                std::vector<moveit_msgs::RobotState>& robot_states) {
-	if (!moveit::core::isArray(params))
+	if (!isArray(params))
 		return false;
 
 	for (int i = 0; i < params.size(); ++i)  // NOLINT(modernize-loop-convert)
@@ -89,11 +100,10 @@ bool BenchmarkParameters::constructRobotStates(XmlRpc::XmlRpcValue& params,
 		if (!params[i].hasMember("joint_state"))
 			return false;
 
-		if (!moveit::core::isStruct(params[i]["joint_state"], { "name", "position" }, "Parameter"))
+		if (!isStruct(params[i]["joint_state"], { "name", "position" }, "Parameter"))
 			return false;
 
-		if (!moveit::core::isArray(params[i]["joint_state"]["name"]) ||
-		    !moveit::core::isArray(params[i]["joint_state"]["position"]))
+		if (!isArray(params[i]["joint_state"]["name"]) || !isArray(params[i]["joint_state"]["position"]))
 			return false;
 
 		if (params[i]["joint_state"]["name"].size() != params[i]["joint_state"]["position"].size())
@@ -106,7 +116,7 @@ bool BenchmarkParameters::constructRobotStates(XmlRpc::XmlRpcValue& params,
 		for (int j = 0; j < params[i]["joint_state"]["name"].size(); ++j)  // NOLINT(modernize-loop-convert)
 		{
 			std::string name = static_cast<std::string>(params[i]["joint_state"]["name"][j]);
-			double position = moveit::core::parseDouble(params[i]["joint_state"]["position"][j]);
+			double position = parseDouble(params[i]["joint_state"]["position"][j]);
 
 			rs.joint_state.name.emplace_back(name);
 			rs.joint_state.position.emplace_back(position);
@@ -114,7 +124,170 @@ bool BenchmarkParameters::constructRobotStates(XmlRpc::XmlRpcValue& params,
 		robot_states_.push_back(rs);
 	}
 	return true;
-};  // namespace benchmark_suite
+};
+bool BenchmarkParameters::collectCollisionObjects(XmlRpc::XmlRpcValue& params,
+                                                  std::vector<moveit_msgs::CollisionObject>& collision_objects) {
+	if (!isArray(params))
+		return false;
+
+	for (int i = 0; i < params.size(); ++i)  // NOLINT(modernize-loop-convert)
+	{
+		if (!isStruct(params[i], { "id", "frame_id", "type" }, "Parameter"))
+			return false;
+
+		collision_objects.emplace_back(moveit_msgs::CollisionObject());
+
+		moveit_msgs::CollisionObject& co = collision_objects.back();
+		co.id = static_cast<std::string>(params[i]["id"]);
+		co.header.frame_id = static_cast<std::string>(params[i]["frame_id"]);
+		co.operation = co.ADD;
+
+		if (params[i]["type"] == "mesh") {
+			co.meshes.resize(1);
+			co.mesh_poses.resize(1);
+			if (!constructMesh(params[i], co.meshes[0]))
+				return false;
+			if (!constructPose(params[i], co.mesh_poses[0]))
+				return false;
+		} else if (params[i]["type"] == "box_primitive") {
+			co.primitives.resize(1);
+			co.primitive_poses.resize(1);
+			if (!constructBoxPrimitive(params[i], co.primitives[0]))
+				return false;
+			if (!constructPose(params[i], co.primitive_poses[0]))
+				return false;
+		} else if (params[i]["type"] == "sphere_primitive") {
+			co.primitives.resize(1);
+			co.primitive_poses.resize(1);
+			if (!constructSpherePrimitive(params[i], co.primitives[0]))
+				return false;
+			if (!constructPose(params[i], co.primitive_poses[0]))
+				return false;
+		} else if (params[i]["type"] == "cylinder_primitive") {
+			co.primitives.resize(1);
+			co.primitive_poses.resize(1);
+			if (!constructCylinderPrimitive(params[i], co.primitives[0]))
+				return false;
+			if (!constructPose(params[i], co.primitive_poses[0]))
+				return false;
+		} else if (params[i]["type"] == "cone_primitive") {
+			co.primitives.resize(1);
+			co.primitive_poses.resize(1);
+			if (!constructConePrimitive(params[i], co.primitives[0]))
+				return false;
+			if (!constructPose(params[i], co.primitive_poses[0]))
+				return false;
+		} else {
+			ROS_ERROR("Unrecognized type");
+			return false;
+		}
+	}
+	return true;
+};
+
+bool BenchmarkParameters::constructMesh(XmlRpc::XmlRpcValue& params, shape_msgs::Mesh& mesh) {
+	if (!params.hasMember("path"))
+		return false;
+
+	const std::string& path = params["path"];
+	Eigen::Vector3d scaling = Eigen::Vector3d::Zero();
+
+	if (params.hasMember("scaling")) {
+		if (!isArray(params["scaling"], 3, "scaling", "xyz dimension"))
+			return false;
+		auto& xyz = params["scaling"];
+		scaling = Eigen::Vector3d(parseDouble(xyz[0]), parseDouble(xyz[1]), parseDouble(xyz[2]));
+	}
+
+	shapes::Shape* shape = shapes::createMeshFromResource(path, scaling);
+	shapes::ShapeMsg shape_msg;
+	shapes::constructMsgFromShape(shape, shape_msg);
+
+	mesh = boost::get<shape_msgs::Mesh>(shape_msg);
+
+	return true;
+};
+
+// TODO make as template?
+bool BenchmarkParameters::constructBoxPrimitive(XmlRpc::XmlRpcValue& params, shape_msgs::SolidPrimitive& primitive) {
+	if (!params.hasMember("dimensions"))
+		return false;
+	if (!isArray(params["dimensions"], 3, "dimensions", "xyz box size"))
+		return false;
+	auto& xyz = params["dimensions"];
+	primitive.type = shape_msgs::SolidPrimitive::BOX;
+	primitive.dimensions.resize(geometric_shapes::solidPrimitiveDimCount<shape_msgs::SolidPrimitive::BOX>());
+	primitive.dimensions[shape_msgs::SolidPrimitive::BOX_X] = parseDouble(xyz[0]);
+	primitive.dimensions[shape_msgs::SolidPrimitive::BOX_Y] = parseDouble(xyz[1]);
+	primitive.dimensions[shape_msgs::SolidPrimitive::BOX_Z] = parseDouble(xyz[2]);
+
+	return true;
+};
+
+bool BenchmarkParameters::constructSpherePrimitive(XmlRpc::XmlRpcValue& params, shape_msgs::SolidPrimitive& primitive) {
+	if (!params.hasMember("dimensions"))
+		return false;
+	if (!isArray(params["dimensions"], 1, "dimensions", "sphere radius"))
+		return false;
+	auto& xyz = params["dimensions"];
+	primitive.type = shape_msgs::SolidPrimitive::SPHERE;
+	primitive.dimensions.resize(geometric_shapes::solidPrimitiveDimCount<shape_msgs::SolidPrimitive::SPHERE>());
+	primitive.dimensions[shape_msgs::SolidPrimitive::SPHERE_RADIUS] = parseDouble(xyz[0]);
+
+	return true;
+};
+
+bool BenchmarkParameters::constructCylinderPrimitive(XmlRpc::XmlRpcValue& params,
+                                                     shape_msgs::SolidPrimitive& primitive) {
+	if (!params.hasMember("dimensions"))
+		return false;
+	if (!isArray(params["dimensions"], 2, "dimensions", "cylinder height and radius"))
+		return false;
+	auto& xyz = params["dimensions"];
+	primitive.type = shape_msgs::SolidPrimitive::CYLINDER;
+	primitive.dimensions.resize(geometric_shapes::solidPrimitiveDimCount<shape_msgs::SolidPrimitive::CYLINDER>());
+	primitive.dimensions[shape_msgs::SolidPrimitive::CYLINDER_HEIGHT] = parseDouble(xyz[0]);
+	primitive.dimensions[shape_msgs::SolidPrimitive::CYLINDER_RADIUS] = parseDouble(xyz[1]);
+
+	return true;
+};
+
+bool BenchmarkParameters::constructConePrimitive(XmlRpc::XmlRpcValue& params, shape_msgs::SolidPrimitive& primitive) {
+	if (!params.hasMember("dimensions"))
+		return false;
+	if (!isArray(params["dimensions"], 2, "dimensions", "cone height and radius"))
+		return false;
+	auto& xyz = params["dimensions"];
+	primitive.type = shape_msgs::SolidPrimitive::CONE;
+	primitive.dimensions.resize(geometric_shapes::solidPrimitiveDimCount<shape_msgs::SolidPrimitive::CONE>());
+	primitive.dimensions[shape_msgs::SolidPrimitive::CONE_HEIGHT] = parseDouble(xyz[0]);
+	primitive.dimensions[shape_msgs::SolidPrimitive::CONE_RADIUS] = parseDouble(xyz[1]);
+
+	return true;
+};
+
+bool BenchmarkParameters::constructPose(XmlRpc::XmlRpcValue& params, geometry_msgs::Pose& pose) {
+	pose.orientation.w = 1.0;
+
+	if (params.hasMember("position")) {
+		if (!isArray(params["position"], 3, "position", "xyz position"))
+			return false;
+
+		pose.position.x = parseDouble(params["position"][0]);
+		pose.position.y = parseDouble(params["position"][1]);
+		pose.position.z = parseDouble(params["position"][2]);
+	}
+	if (params.hasMember("orientation")) {
+		if (!isArray(params["orientation"], 3, "orientation", "RPY values"))
+			return false;
+
+		auto& rpy = params["orientation"];
+		tf2::Quaternion q;
+		q.setRPY(parseDouble(rpy[0]), parseDouble(rpy[1]), parseDouble(rpy[2]));
+		pose.orientation = toMsg(q);
+	}
+	return true;
+};
 
 }  // namespace benchmark_suite
 }  // namespace moveit

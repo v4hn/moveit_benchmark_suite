@@ -37,6 +37,7 @@
 */
 
 #include <moveit/benchmark_suite/benchmark_parameters.h>
+#include <moveit/planning_scene_interface/planning_scene_interface.h>
 
 using namespace moveit::benchmark_suite;
 
@@ -44,6 +45,7 @@ int main(int argc, char** argv) {
 	ros::init(argc, argv, "moveit_benchmark_suite_load_rss");
 	ros::AsyncSpinner spinner(1);
 	spinner.start();
+	moveit::planning_interface::PlanningSceneInterface psi;
 
 	ros::NodeHandle nh(ros::this_node::getName());
 
@@ -51,13 +53,17 @@ int main(int argc, char** argv) {
 
 	params.readStartStates(nh);
 	params.readGoalConstraints(nh);
-	const std::vector<moveit_msgs::RobotState>& robot_states = params.getRobotStateMsgs();
-	const moveit_msgs::Constraints& goal_constraints = params.getGoalConstraintsMsgs();
+	params.readCollisionObjects(nh);
+	const std::vector<moveit_msgs::RobotState>& robot_states = params.getRobotStates();
+	const moveit_msgs::Constraints& goal_constraints = params.getGoalConstraints();
+	const std::vector<moveit_msgs::CollisionObject>& collision_objects = params.getCollisionObjects();
 
-	for (const auto& rs : robot_states) {
-		std::cout << rs << std::endl;
+	for (const auto& co : collision_objects) {
+		if (!psi.applyCollisionObject(co)) {
+			ROS_ERROR("Failed to apply collision objects");
+		}
 	}
-	std::cout << goal_constraints;
 
+	ros::waitForShutdown();
 	return 0;
 }

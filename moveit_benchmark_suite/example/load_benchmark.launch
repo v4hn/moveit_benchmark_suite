@@ -6,10 +6,15 @@
   <!-- Goal constraints -->
   <arg name="gc" default="$(find moveit_benchmark_suite)/example/goal_constraints.yaml"/>
 
+  <!-- Collision objects -->
+  <arg name="co" default="$(find moveit_benchmark_suite)/example/collision_objects.yaml"/>
+
+
   <!-- Launch node -->
   <node name="moveit_benchmark_suite_load_benchmark" pkg="moveit_benchmark_suite" type="moveit_benchmark_suite_load_benchmark" output="screen" required="true" launch-prefix="gdb --args">
     <rosparam command="load" file="$(arg rss)"/>
     <rosparam command="load" file="$(arg gc)"/>
+    <rosparam command="load" file="$(arg co)"/>
   </node>
 
 </launch>
