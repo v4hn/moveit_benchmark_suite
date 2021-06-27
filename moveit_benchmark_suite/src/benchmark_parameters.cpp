@@ -67,7 +67,7 @@ void BenchmarkParameters::readStartStates(ros::NodeHandle& nh) {
 void BenchmarkParameters::readCollisionObjects(ros::NodeHandle& nh) {
 	XmlRpc::XmlRpcValue collision_objects_description;
 	if (!nh.getParam("collision_objects", collision_objects_description) ||
-	    !collectCollisionObjects(collision_objects_description, collision_objects_)) {
+	    !constructCollisionObjects(collision_objects_description, collision_objects_)) {
 		ROS_WARN("Collision objects not found");
 	}
 };
@@ -100,7 +100,10 @@ bool BenchmarkParameters::constructRobotStates(XmlRpc::XmlRpcValue& params,
 		if (!params[i].hasMember("joint_state"))
 			return false;
 
-		if (!isStruct(params[i]["joint_state"], { "name", "position" }, "Parameter"))
+		if (!isStruct(params[i]["joint_state"], { "name", "position" }, "joint_state"))
+			return false;
+
+		if (!isValidStruct(params[i]["joint_state"], { "name", "position" }, "joint_state"))
 			return false;
 
 		if (!isArray(params[i]["joint_state"]["name"]) || !isArray(params[i]["joint_state"]["position"]))
@@ -125,8 +128,8 @@ bool BenchmarkParameters::constructRobotStates(XmlRpc::XmlRpcValue& params,
 	}
 	return true;
 };
-bool BenchmarkParameters::collectCollisionObjects(XmlRpc::XmlRpcValue& params,
-                                                  std::vector<moveit_msgs::CollisionObject>& collision_objects) {
+bool BenchmarkParameters::constructCollisionObjects(XmlRpc::XmlRpcValue& params,
+                                                    std::vector<moveit_msgs::CollisionObject>& collision_objects) {
 	if (!isArray(params))
 		return false;
 
@@ -143,37 +146,22 @@ bool BenchmarkParameters::collectCollisionObjects(XmlRpc::XmlRpcValue& params,
 		co.operation = co.ADD;
 
 		if (params[i]["type"] == "mesh") {
+			if (!isValidStruct(params[i], { "id", "type", "frame_id", "position", "orientation", "path", "scaling" },
+			                   "collision_objects"))
+				return false;
 			co.meshes.resize(1);
 			co.mesh_poses.resize(1);
 			if (!constructMesh(params[i], co.meshes[0]))
 				return false;
 			if (!constructPose(params[i], co.mesh_poses[0]))
 				return false;
-		} else if (params[i]["type"] == "box_primitive") {
+		} else if (static_cast<std::string>(params[i]["type"]).find("primitive") != std::string::npos) {
+			if (!isValidStruct(params[i], { "id", "type", "frame_id", "position", "orientation", "dimensions" },
+			                   "collision_objects"))
+				return false;
 			co.primitives.resize(1);
 			co.primitive_poses.resize(1);
-			if (!constructBoxPrimitive(params[i], co.primitives[0]))
-				return false;
-			if (!constructPose(params[i], co.primitive_poses[0]))
-				return false;
-		} else if (params[i]["type"] == "sphere_primitive") {
-			co.primitives.resize(1);
-			co.primitive_poses.resize(1);
-			if (!constructSpherePrimitive(params[i], co.primitives[0]))
-				return false;
-			if (!constructPose(params[i], co.primitive_poses[0]))
-				return false;
-		} else if (params[i]["type"] == "cylinder_primitive") {
-			co.primitives.resize(1);
-			co.primitive_poses.resize(1);
-			if (!constructCylinderPrimitive(params[i], co.primitives[0]))
-				return false;
-			if (!constructPose(params[i], co.primitive_poses[0]))
-				return false;
-		} else if (params[i]["type"] == "cone_primitive") {
-			co.primitives.resize(1);
-			co.primitive_poses.resize(1);
-			if (!constructConePrimitive(params[i], co.primitives[0]))
+			if (!constructSolidPrimitive(params[i], co.primitives[0]))
 				return false;
 			if (!constructPose(params[i], co.primitive_poses[0]))
 				return false;
@@ -205,6 +193,26 @@ bool BenchmarkParameters::constructMesh(XmlRpc::XmlRpcValue& params, shape_msgs:
 
 	mesh = boost::get<shape_msgs::Mesh>(shape_msg);
 
+	return true;
+};
+
+bool BenchmarkParameters::constructSolidPrimitive(XmlRpc::XmlRpcValue& params, shape_msgs::SolidPrimitive& primitive) {
+	if (params["type"] == "box_primitive") {
+		if (!constructBoxPrimitive(params, primitive))
+			return false;
+	} else if (params["type"] == "sphere_primitive") {
+		if (!constructSpherePrimitive(params, primitive))
+			return false;
+	} else if (params["type"] == "cylinder_primitive") {
+		if (!constructCylinderPrimitive(params, primitive))
+			return false;
+	} else if (params["type"] == "cone_primitive") {
+		if (!constructConePrimitive(params, primitive))
+			return false;
+	} else {
+		ROS_ERROR("Unrecognized Solid Primitive");
+		return false;
+	}
 	return true;
 };
 
@@ -288,6 +296,17 @@ bool BenchmarkParameters::constructPose(XmlRpc::XmlRpcValue& params, geometry_ms
 	}
 	return true;
 };
+
+bool BenchmarkParameters::isValidStruct(XmlRpc::XmlRpcValue& params, const std::set<std::string>& keys,
+                                        const std::string& name) {
+	for (XmlRpc::XmlRpcValue::iterator it = params.begin(); it != params.end(); ++it) {
+		if (keys.find(it->first) == keys.end()) {
+			ROS_WARN_STREAM(name << " contains unknown entity '" << it->first << "'");
+			return false;
+		}
+	}
+	return true;
+}
 
 }  // namespace benchmark_suite
 }  // namespace moveit

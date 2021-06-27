@@ -65,14 +65,17 @@ public:
 	const std::vector<moveit_msgs::CollisionObject>& getCollisionObjects() const { return collision_objects_; }
 
 	bool constructRobotStates(XmlRpc::XmlRpcValue& params, std::vector<moveit_msgs::RobotState>& robot_states);
-	bool collectCollisionObjects(XmlRpc::XmlRpcValue& params,
-	                             std::vector<moveit_msgs::CollisionObject>& collision_objects);
+	bool constructCollisionObjects(XmlRpc::XmlRpcValue& params,
+	                               std::vector<moveit_msgs::CollisionObject>& collision_objects);
 	bool constructMesh(XmlRpc::XmlRpcValue& params, shape_msgs::Mesh& mesh);
+	bool constructSolidPrimitive(XmlRpc::XmlRpcValue& params, shape_msgs::SolidPrimitive& primitive);
 	bool constructBoxPrimitive(XmlRpc::XmlRpcValue& params, shape_msgs::SolidPrimitive& primitive);
 	bool constructSpherePrimitive(XmlRpc::XmlRpcValue& params, shape_msgs::SolidPrimitive& primitive);
 	bool constructCylinderPrimitive(XmlRpc::XmlRpcValue& params, shape_msgs::SolidPrimitive& primitive);
 	bool constructConePrimitive(XmlRpc::XmlRpcValue& params, shape_msgs::SolidPrimitive& primitive);
 	bool constructPose(XmlRpc::XmlRpcValue& params, geometry_msgs::Pose& pose);
+
+	bool isValidStruct(XmlRpc::XmlRpcValue& params, const std::set<std::string>& keys, const std::string& name);
 
 protected:
 	std::vector<moveit_msgs::RobotState> robot_states_;
