@@ -1,5 +1,10 @@
 <launch>
 
+  <!-- Load robot settings -->
+  <include file="$(find moveit_benchmark_suite_panda_moveit_config)/launch/planning_context.launch">
+    <arg name="load_robot_description" value="true"/>
+  </include>
+
   <!-- Robot start state -->
   <arg name="rss" default="$(find moveit_benchmark_suite)/example/panda_arm_start_state.yaml"/>
 
