@@ -1,0 +1,63 @@
+anchors:
+  dummy: &root_frame world
+  
+  dummy: &post_dimension
+    - 0.035
+    - 0.035
+    - 1.25
+    
+  dummy: &shelf_dimension
+    - &dim_x 0.6
+    - &dim_y 1.5
+    - &dim_z 0.02
+    
+  dummy: &shelf_gap 0.25
+
+collision_objects:
+  # Create 4 posts of the open shelf (f=front b=back, l=left, r=right)
+  - id: 'post_bl'
+    type: box_primitive
+    frame_id: *root_frame
+    position: [-0.3, -0.75, 0.625]
+    dimensions: *post_dimension
+  - id: 'post_br'
+    type: box_primitive
+    frame_id: post_bl
+    position: [0.0, *dim_y, 0.0]
+    dimensions: *post_dimension
+  - id: 'post_fl'
+    type: box_primitive
+    frame_id: post_bl
+    position: [*dim_x, 0.0, 0.0]
+    dimensions: *post_dimension
+  - id: 'post_fr'
+    type: box_primitive
+    frame_id: post_br
+    position: [*dim_x, 0.0, 0.0]
+    dimensions: *post_dimension
+  # Create 5 shelves (1 = wrt. bottom)
+  - id: 'shelf_1'
+    type: box_primitive
+    frame_id: *root_frame
+    position: [0.0, 0.0, *shelf_gap]
+    dimensions: *shelf_dimension
+  - id: 'shelf_2'
+    type: box_primitive
+    frame_id: shelf_1
+    position: [0.0, 0.0, *shelf_gap]
+    dimensions: *shelf_dimension
+  - id: 'shelf_3'
+    type: box_primitive
+    frame_id: shelf_2
+    position: [0.0, 0.0, *shelf_gap]
+    dimensions: *shelf_dimension
+  - id: 'shelf_4'
+    type: box_primitive
+    frame_id: shelf_3
+    position: [0.0, 0.0, *shelf_gap]
+    dimensions: *shelf_dimension
+  - id: 'shelf_5'
+    type: box_primitive
+    frame_id: shelf_4
+    position: [0.0, 0.0, *shelf_gap]
+    dimensions: *shelf_dimension
