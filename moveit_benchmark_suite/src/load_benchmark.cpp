@@ -38,6 +38,9 @@
 
 #include <moveit/benchmark_suite/benchmark_parameters.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
+#include <moveit/planning_scene_monitor/planning_scene_monitor.h>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/move_group_interface/move_group_interface.h>
 
 using namespace moveit::benchmark_suite;
 
