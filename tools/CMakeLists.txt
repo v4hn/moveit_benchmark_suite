@@ -52,6 +52,9 @@ target_link_libraries(convert_dataset ${PROJECT_NAME} ${catkin_LIBRARIES})
 install(DIRECTORY include/moveit_benchmark_suite
   DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION})
 
+install(DIRECTORY launch
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+
 install(TARGETS
   ${PROJECT_NAME}
   plot_dataset
